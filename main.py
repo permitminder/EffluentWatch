@@ -69,6 +69,10 @@ nav_page = st.sidebar.radio(
 )
 st.session_state.nav_page = nav_page
 
+# Reset current_view when navigating via sidebar (so terms/privacy don't stick)
+if nav_page in ("Search Records", "Email Alerts", "Dashboard"):
+    st.session_state.current_view = "search"
+
 # ── DATA ────────────────────────────────────────────────────────────────────
 DATA_FILE = _CFG_DATA_FILE
 FACILITY_LOOKUP = "utils/permit_facility_lookup.csv"

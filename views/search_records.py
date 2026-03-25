@@ -5,6 +5,38 @@ from datetime import datetime
 
 from state_config import APP_NAME, APP_TAGLINE, STATE_NAME, CONTACT_EMAIL
 
+STRIPE_URL = "https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00"
+
+
+def _render_pricing_card():
+    """Render the Pro pricing card above upgrade banners."""
+    st.markdown(f"""
+<div style="background: #ffffff; border: 1px solid #e8e4df; border-radius: 8px; padding: 24px 28px; margin: 16px 0;">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 2px;
+                text-transform: uppercase; color: #3a6b1a; margin-bottom: 8px; font-weight: 600;">
+        {APP_NAME} Pro
+    </div>
+    <div style="font-family: 'Libre Baskerville', serif; font-size: 28px; font-weight: 700;
+                color: #1a1814; margin-bottom: 4px;">
+        $29<span style="font-size: 16px; font-weight: 400; color: #6b6560;">/mo</span>
+    </div>
+    <ul style="color: #3a3530; font-size: 14px; line-height: 1.8; margin: 12px 0 16px 0; padding-left: 20px;">
+        <li>Full access to all discharge exceedance records</li>
+        <li>All search filters</li>
+        <li>Email alerts</li>
+        <li>Detailed facility reports</li>
+        <li>CSV export</li>
+    </ul>
+    <p style="color: #6b6560; font-size: 12px; margin-bottom: 16px;">Cancel anytime.</p>
+    <a href="{STRIPE_URL}"
+       style="display: inline-block; background: #3a6b1a; color: white; padding: 11px 24px;
+              border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+              font-weight: 600; letter-spacing: 0.5px; text-decoration: none;">
+        Upgrade to {APP_NAME} Pro
+    </a>
+</div>
+""", unsafe_allow_html=True)
+
 
 def render_search_records(df_all, permit_summary, build_permit_summary):
     """Render the Search Records page.
@@ -21,7 +53,7 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
         <div class="pm-headline">Track permit activity.<br>Get alerted when <em>limits are exceeded.</em></div>
         <div class="pm-subhead">
             {APP_NAME} pulls raw discharge monitoring data from the EPA ECHO system
-            and surfaces it in one place — for attorneys, advocates, and communities who need quick answers.
+            and surfaces it in one place — for environmental attorneys and consultants who need discharge data fast.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -33,9 +65,10 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
             _access_email = st.text_input(
                 "Account email", placeholder="you@example.com",
                 key="access_email", label_visibility="collapsed",
+                help="Enter your email to unlock full search access.",
             )
         with _ac_col2:
-            _check_clicked = st.button("Check Access", use_container_width=True)
+            _check_clicked = st.button("View All Records", use_container_width=True)
         if _check_clicked:
             if _access_email and _access_email.strip():
                 try:
@@ -54,18 +87,18 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
                         st.session_state.is_paid_user = True
                         st.rerun()
                     else:
-                        st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                        _render_pricing_card()
                         st.warning(
                             "No active Pro subscription found for that email. "
-                            "[Upgrade to {APP_NAME} Pro →]"
-                            "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
+                            f"[Upgrade to {APP_NAME} Pro →]"
+                            f"({STRIPE_URL})"
                         )
                 except Exception:
-                    st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                    _render_pricing_card()
                     st.warning(
                         "Could not verify account. "
-                        "[Upgrade to {APP_NAME} Pro →]"
-                        "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
+                        f"[Upgrade to {APP_NAME} Pro →]"
+                        f"({STRIPE_URL})"
                     )
             else:
                 st.warning("Please enter your email to check access.")
@@ -212,11 +245,11 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
                 df_display = filter_summary.sort_values("exceedance_count", ascending=False).copy()
                 if not st.session_state.get("is_paid_user", False) and len(df_display) > 20:
                     df_display = df_display.head(20)
-                    st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                    _render_pricing_card()
                     st.warning(
                         f"Free preview: Showing 20 of {_total_permits:,} results. "
-                        "[Upgrade to {APP_NAME} Pro →]"
-                        "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
+                        f"[Upgrade to {APP_NAME} Pro →]"
+                        f"({STRIPE_URL})"
                     )
                 else:
                     df_display = df_display.head(100)
@@ -279,11 +312,11 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
             _total_all = len(permit_summary)
             if not st.session_state.get("is_paid_user", False) and _total_all > 20:
                 df_display = permit_summary.sort_values("exceedance_count", ascending=False).head(20).copy()
-                st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                _render_pricing_card()
                 st.warning(
                     f"Free preview: Showing 20 of {_total_all:,} results. "
-                    "[Upgrade to {APP_NAME} Pro →]"
-                    "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
+                    f"[Upgrade to {APP_NAME} Pro →]"
+                    f"({STRIPE_URL})"
                 )
             else:
                 df_display = permit_summary.sort_values("exceedance_count", ascending=False).head(50).copy()
