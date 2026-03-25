@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-EffluentWatch EPA ECHO DMR Scraper
+EPA ECHO DMR Scraper
 
 Downloads the current fiscal year bulk DMR CSV from EPA ECHO ICIS-NPDES,
-filters to Texas, identifies effluent limit exceedances, maps columns
-to the tx_exceedances_launch_ready.csv format, deduplicates against existing
+filters to the configured state, identifies effluent limit exceedances,
+maps columns to the exceedances CSV format, deduplicates against existing
 rows, and appends new rows.
 
 Data source:
@@ -28,14 +28,13 @@ import pandas as pd
 import requests
 
 from launch_ready_columns import add_chemical_laundering_flags, prepare_launch_ready_dmr
+from state_config import STATE_CODE, STATE_NAME, APP_NAME, DATA_FILE
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
-DATA_FILE = "tx_exceedances_launch_ready.csv"
 ECHO_BASE_URL = "https://echo.epa.gov/files/echodownloads"
-TX_STATE_CODE = "TX"
 
 # Chunk size for reading the large nationwide CSV
 READ_CHUNK_SIZE = 50_000
@@ -123,10 +122,10 @@ def stream_download(url: str, dest_path: str) -> None:
     print()  # newline after progress bar
 
 
-def fetch_tx_exceedances(fy: int, tmp_dir: str) -> pd.DataFrame:
+def fetch_state_exceedances(fy: int, tmp_dir: str) -> pd.DataFrame:
     """
     Download the ECHO DMR ZIP for *fy*, stream-read the CSV in chunks,
-    filter to TX rows only, and return them as a DataFrame.
+    filter to the configured state's rows only, and return them as a DataFrame.
 
     Returns an empty DataFrame if the file is unavailable or unreadable.
     """
@@ -157,8 +156,8 @@ def fetch_tx_exceedances(fy: int, tmp_dir: str) -> pd.DataFrame:
                 print(f"  No CSV found in ZIP; contents: {names_in_zip}")
                 return pd.DataFrame()
 
-            print(f"  Streaming '{match}' and filtering to TX …")
-            tx_chunks = []
+            print(f"  Streaming '{match}' and filtering to {STATE_CODE} …")
+            state_chunks = []
 
             with zf.open(match) as csv_fh:
                 reader = pd.read_csv(
@@ -170,19 +169,19 @@ def fetch_tx_exceedances(fy: int, tmp_dir: str) -> pd.DataFrame:
                 total_rows = 0
                 for chunk in reader:
                     total_rows += len(chunk)
-                    tx_chunk = _filter_chunk_to_tx(chunk)
-                    if not tx_chunk.empty:
-                        tx_chunks.append(tx_chunk)
+                    state_chunk = _filter_chunk_to_state(chunk)
+                    if not state_chunk.empty:
+                        state_chunks.append(state_chunk)
 
             print(f"  Total rows scanned: {total_rows:,}")
 
-            if not tx_chunks:
-                print("  No TX rows found.")
+            if not state_chunks:
+                print(f"  No {STATE_CODE} rows found.")
                 return pd.DataFrame()
 
-            tx_df = pd.concat(tx_chunks, ignore_index=True)
-            print(f"  TX rows retained: {len(tx_df):,}")
-            return tx_df
+            state_df = pd.concat(state_chunks, ignore_index=True)
+            print(f"  {STATE_CODE} rows retained: {len(state_df):,}")
+            return state_df
 
     except zipfile.BadZipFile:
         print(f"  Downloaded file is not a valid ZIP for FY{fy}.")
@@ -192,14 +191,14 @@ def fetch_tx_exceedances(fy: int, tmp_dir: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def _filter_chunk_to_tx(chunk: pd.DataFrame) -> pd.DataFrame:
-    """Return only TX rows from *chunk*."""
+def _filter_chunk_to_state(chunk: pd.DataFrame) -> pd.DataFrame:
+    """Return only rows matching the configured STATE_CODE from *chunk*."""
     if "STATE_CODE" in chunk.columns:
-        return chunk[chunk["STATE_CODE"].str.upper().str.strip() == TX_STATE_CODE].copy()
+        return chunk[chunk["STATE_CODE"].str.upper().str.strip() == STATE_CODE].copy()
     # Fallback: use permit number prefix
     if "EXTERNAL_PERMIT_NMBR" in chunk.columns:
         return chunk[
-            chunk["EXTERNAL_PERMIT_NMBR"].str.upper().str.startswith(TX_STATE_CODE)
+            chunk["EXTERNAL_PERMIT_NMBR"].str.upper().str.startswith(STATE_CODE)
         ].copy()
     # Cannot filter — return everything (shouldn't happen with real ECHO data)
     print("  Warning: STATE_CODE column absent; keeping all rows unfiltered.")
@@ -243,7 +242,7 @@ def identify_exceedances(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     exc_df = df[exceeded].copy()
-    print(f"  Exceedances: {len(exc_df):,} of {len(df):,} TX rows")
+    print(f"  Exceedances: {len(exc_df):,} of {len(df):,} {STATE_CODE} rows")
     return exc_df
 
 
@@ -348,31 +347,31 @@ def deduplicate_and_append(new_df: pd.DataFrame, existing_keys: set) -> int:
 
 def main() -> None:
     print(f"\n{'='*60}")
-    print("EffluentWatch EPA ECHO DMR Scraper")
+    print(f"{APP_NAME} EPA ECHO DMR Scraper ({STATE_CODE})")
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}\n")
 
     fy = current_fiscal_year()
     print(f"Target fiscal year: FY{fy}")
 
-    # Download + filter to TX inside a temp directory (cleaned up on exit)
+    # Download + filter to state inside a temp directory (cleaned up on exit)
     with tempfile.TemporaryDirectory() as tmp_dir:
-        tx_df = fetch_tx_exceedances(fy, tmp_dir)
+        state_df = fetch_state_exceedances(fy, tmp_dir)
 
         # Fall back to prior FY if current year not yet published
-        if tx_df.empty:
+        if state_df.empty:
             prior_fy = fy - 1
             print(f"\nFY{fy} unavailable — trying FY{prior_fy} …")
-            tx_df = fetch_tx_exceedances(prior_fy, tmp_dir)
+            state_df = fetch_state_exceedances(prior_fy, tmp_dir)
 
-    if tx_df.empty:
+    if state_df.empty:
         print("\nERROR: Could not retrieve DMR data from ECHO. Exiting.")
         sys.exit(1)
 
     # --- Identify exceedances ---
     print("\nIdentifying exceedances …")
-    exc_df = identify_exceedances(tx_df)
-    del tx_df  # free memory
+    exc_df = identify_exceedances(state_df)
+    del state_df  # free memory
 
     if exc_df.empty:
         print("No exceedances found. CSV unchanged.")

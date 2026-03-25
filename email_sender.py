@@ -3,6 +3,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import streamlit as st
 
+from state_config import APP_NAME, DOMAIN, MAILING_ADDRESS
+
 def send_email(to_email, subject, body):
     """Send email using Gmail SMTP"""
     try:
@@ -31,7 +33,7 @@ def send_email(to_email, subject, body):
 
 def send_exceedance_alert(to_email, facility_name, permit_num, exceedances):
     """Send formatted exceedance alert"""
-    subject = f"⚠️ EffluentWatch Alert: {facility_name} Exceedances"
+    subject = f"⚠️ {APP_NAME} Alert: {facility_name} Exceedances"
     
     body = f"""
     <h2>New Exceedances Detected</h2>
@@ -40,11 +42,11 @@ def send_exceedance_alert(to_email, facility_name, permit_num, exceedances):
     <p><strong>Exceedances Found:</strong> {len(exceedances)}</p>
 
     <hr>
-    <p>Log into <a href="https://effluentwatch.org">EffluentWatch</a> to view full details.</p>
+    <p>Log into <a href="https://{DOMAIN}">{APP_NAME}</a> to view full details.</p>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e0e0e0;text-align:center;
                 font-size:12px;color:#888;line-height:1.6;">
       <p style="margin:0;">
-        This alert was sent by EffluentWatch (effluentwatch.org) because you subscribed to exceedance alerts.
+        This alert was sent by {APP_NAME} ({DOMAIN}) because you subscribed to exceedance alerts.
       </p>
       <p style="margin:10px 0;color:#999;font-size:11px;">
         Exceedance data reflects values reported to EPA ECHO and may not reflect current
@@ -52,8 +54,8 @@ def send_exceedance_alert(to_email, facility_name, permit_num, exceedances):
         Verify independently before taking action.
       </p>
       <p style="margin:10px 0 0;font-size:11px;">
-        &copy; 2026 EffluentWatch &middot; effluentwatch.org<br>
-        PO Box 1501, Austin, TX 78767
+        &copy; 2026 {APP_NAME} &middot; {DOMAIN}<br>
+        {MAILING_ADDRESS}
       </p>
     </div>
     """

@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
+from state_config import APP_NAME, APP_TAGLINE, STATE_NAME, CONTACT_EMAIL
+
 
 def render_search_records(df_all, permit_summary, build_permit_summary):
     """Render the Search Records page.
@@ -15,10 +17,10 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
     # ── HERO ──
     st.markdown("""
     <div class="pm-hero">
-        <div class="pm-eyebrow">Texas Discharge Monitoring</div>
+        <div class="pm-eyebrow">{APP_TAGLINE}</div>
         <div class="pm-headline">Track permit activity.<br>Get alerted when <em>limits are exceeded.</em></div>
         <div class="pm-subhead">
-            EffluentWatch pulls raw discharge monitoring data from the EPA ECHO system
+            {APP_NAME} pulls raw discharge monitoring data from the EPA ECHO system
             and surfaces it in one place — for attorneys, advocates, and communities who need quick answers.
         </div>
     </div>
@@ -52,17 +54,17 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
                         st.session_state.is_paid_user = True
                         st.rerun()
                     else:
-                        st.caption("EffluentWatch Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                        st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
                         st.warning(
                             "No active Pro subscription found for that email. "
-                            "[Upgrade to EffluentWatch Pro →]"
+                            "[Upgrade to {APP_NAME} Pro →]"
                             "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
                         )
                 except Exception:
-                    st.caption("EffluentWatch Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                    st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
                     st.warning(
                         "Could not verify account. "
-                        "[Upgrade to EffluentWatch Pro →]"
+                        "[Upgrade to {APP_NAME} Pro →]"
                         "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
                     )
             else:
@@ -210,10 +212,10 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
                 df_display = filter_summary.sort_values("exceedance_count", ascending=False).copy()
                 if not st.session_state.get("is_paid_user", False) and len(df_display) > 20:
                     df_display = df_display.head(20)
-                    st.caption("EffluentWatch Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                    st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
                     st.warning(
                         f"Free preview: Showing 20 of {_total_permits:,} results. "
-                        "[Upgrade to EffluentWatch Pro →]"
+                        "[Upgrade to {APP_NAME} Pro →]"
                         "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
                     )
                 else:
@@ -227,13 +229,13 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
                 st.markdown("""
 <div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 16px 20px; margin: 16px 0; font-size: 14px; line-height: 1.6; color: #5d4037;">
     <strong>Data Disclaimer</strong><br>
-    Exceedance data shown here reflects values reported to the EPA ECHO (Enforcement and Compliance History Online) system for Texas NPDES permits and compared against permit limits on file. This data <strong>may not reflect current facility
+    Exceedance data shown here reflects values reported to the EPA ECHO (Enforcement and Compliance History Online) system for {STATE_NAME} NPDES permits and compared against permit limits on file. This data <strong>may not reflect current facility
     status</strong>. Reported exceedances may be subject to variances, consent orders, compliance schedules,
     reporting corrections, or other regulatory context not captured on this platform.<br><br>
-    EffluentWatch is an informational tool only. It does not make compliance determinations and is not a substitute
+    {APP_NAME} is an informational tool only. It does not make compliance determinations and is not a substitute
     for independent verification of facility records. No information on this platform constitutes legal advice.<br><br>
     <strong>Facility operators:</strong> To report a data concern or request a correction review, contact
-    <a href="mailto:data@effluentwatch.org" style="color: #5d4037;">data@effluentwatch.org</a>.
+    <a href="mailto:{CONTACT_EMAIL}" style="color: #5d4037;">{CONTACT_EMAIL}</a>.
 </div>
 """, unsafe_allow_html=True)
                 st.caption("Click any row to view permit details")
@@ -277,10 +279,10 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
             _total_all = len(permit_summary)
             if not st.session_state.get("is_paid_user", False) and _total_all > 20:
                 df_display = permit_summary.sort_values("exceedance_count", ascending=False).head(20).copy()
-                st.caption("EffluentWatch Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
+                st.caption("{APP_NAME} Pro provides expanded access to publicly available EPA ECHO discharge monitoring data. Subscription does not guarantee data accuracy, completeness, or timeliness. See Terms of Service for details.")
                 st.warning(
                     f"Free preview: Showing 20 of {_total_all:,} results. "
-                    "[Upgrade to EffluentWatch Pro →]"
+                    "[Upgrade to {APP_NAME} Pro →]"
                     "(https://buy.stripe.com/4gM00jeJV6We5wI0Q41Nu00)"
                 )
             else:
@@ -313,13 +315,13 @@ def render_search_records(df_all, permit_summary, build_permit_summary):
             st.markdown("""
 <div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 16px 20px; margin: 16px 0; font-size: 14px; line-height: 1.6; color: #5d4037;">
     <strong>Data Disclaimer</strong><br>
-    Exceedance data shown here reflects values reported to the EPA ECHO (Enforcement and Compliance History Online) system for Texas NPDES permits and compared against permit limits on file. This data <strong>may not reflect current facility
+    Exceedance data shown here reflects values reported to the EPA ECHO (Enforcement and Compliance History Online) system for {STATE_NAME} NPDES permits and compared against permit limits on file. This data <strong>may not reflect current facility
     status</strong>. Reported exceedances may be subject to variances, consent orders, compliance schedules,
     reporting corrections, or other regulatory context not captured on this platform.<br><br>
-    EffluentWatch is an informational tool only. It does not make compliance determinations and is not a substitute
+    {APP_NAME} is an informational tool only. It does not make compliance determinations and is not a substitute
     for independent verification of facility records. No information on this platform constitutes legal advice.<br><br>
     <strong>Facility operators:</strong> To report a data concern or request a correction review, contact
-    <a href="mailto:data@effluentwatch.org" style="color: #5d4037;">data@effluentwatch.org</a>.
+    <a href="mailto:{CONTACT_EMAIL}" style="color: #5d4037;">{CONTACT_EMAIL}</a>.
 </div>
 """, unsafe_allow_html=True)
             st.caption("Click any row to view permit details")

@@ -1,11 +1,13 @@
-"""Email utilities for EffluentWatch Streamlit app."""
+"""Email utilities for the Streamlit app."""
 
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import streamlit as st
 
-APP_URL = "https://effluentwatch.org"
+from state_config import APP_NAME, DOMAIN, MAILING_ADDRESS
+
+APP_URL = f"https://{DOMAIN}"
 
 
 def send_verification_email(to_email, token):
@@ -16,16 +18,16 @@ def send_verification_email(to_email, token):
     """
     verify_url = f"{APP_URL}/?verify={token}"
 
-    subject = "EffluentWatch \u2014 Confirm your alert subscription"
+    subject = f"{APP_NAME} \u2014 Confirm your alert subscription"
     body_html = f"""<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;">
   <div style="background:#1e3a5f;color:white;padding:24px 30px;border-radius:8px 8px 0 0;">
-    <h1 style="margin:0;font-size:20px;">Confirm Your EffluentWatch Alert</h1>
+    <h1 style="margin:0;font-size:20px;">Confirm Your {APP_NAME} Alert</h1>
   </div>
   <div style="padding:24px 30px;">
-    <p>You (or someone using your email) signed up for exceedance alerts on EffluentWatch.</p>
+    <p>You (or someone using your email) signed up for exceedance alerts on {APP_NAME}.</p>
     <p>Click the button below to confirm your subscription:</p>
     <p style="text-align:center;margin:28px 0;">
       <a href="{verify_url}"
@@ -44,8 +46,8 @@ def send_verification_email(to_email, token):
   <div style="background:#f5f5f5;padding:20px 30px;text-align:center;
               font-size:12px;color:#888;border-radius:0 0 8px 8px;line-height:1.6;">
     <p style="margin:0;">
-      This email was sent by <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">EffluentWatch</a>
-      (effluentwatch.org) because you subscribed to exceedance alerts.
+      This email was sent by <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">{APP_NAME}</a>
+      ({DOMAIN}) because you subscribed to exceedance alerts.
     </p>
     <p style="margin:10px 0;color:#999;font-size:11px;">
       Exceedance data reflects values reported to EPA ECHO and may not reflect current
@@ -53,9 +55,9 @@ def send_verification_email(to_email, token):
       Verify independently before taking action.
     </p>
     <p style="margin:10px 0 0;font-size:11px;">
-      &copy; 2026 EffluentWatch &middot;
-      <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">effluentwatch.org</a><br>
-      PO Box 1501, Austin, TX 78767
+      &copy; 2026 {APP_NAME} &middot;
+      <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">{DOMAIN}</a><br>
+      {MAILING_ADDRESS}
     </p>
   </div>
 </body>
@@ -68,7 +70,7 @@ def send_verification_email(to_email, token):
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = f"EffluentWatch <{sender_email}>"
+        msg["From"] = f"{APP_NAME} <{sender_email}>"
         msg["To"] = to_email
         msg.attach(MIMEText(body_html, "html"))
 

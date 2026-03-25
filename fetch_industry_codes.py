@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-EffluentWatch EPA ECHO Industry Code Fetcher
+EPA ECHO Industry Code Fetcher
 
 Downloads NPDES_NAICS.csv and NPDES_SICS.csv from the EPA ECHO ICIS-NPDES
-bulk download, filters to Texas permits, keeps only primary codes,
-and produces a lookup CSV: utils/permit_industry_lookup.csv
+bulk download, filters to the configured state's permits, keeps only primary
+codes, and produces a lookup CSV: utils/permit_industry_lookup.csv
 
 Data source:
   https://echo.epa.gov/tools/data-downloads/icis-npdes-download-summary
@@ -21,6 +21,8 @@ from datetime import datetime
 import pandas as pd
 import requests
 
+from state_config import STATE_CODE, APP_NAME
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -28,7 +30,7 @@ import requests
 ECHO_BASE_URL = "https://echo.epa.gov/files/echodownloads"
 ZIP_FILENAME = "npdes_downloads.zip"
 OUTPUT_FILE = "utils/permit_industry_lookup.csv"
-TX_PREFIX = "TX"
+STATE_PREFIX = STATE_CODE
 
 
 # ---------------------------------------------------------------------------
@@ -65,9 +67,9 @@ def stream_download(url: str, dest_path: str) -> None:
 # Extract & filter
 # ---------------------------------------------------------------------------
 
-def extract_and_filter_tx(zip_path: str, csv_name: str, permit_col: str) -> pd.DataFrame:
+def extract_and_filter_state(zip_path: str, csv_name: str, permit_col: str) -> pd.DataFrame:
     """
-    Extract *csv_name* from the ECHO ZIP, filter to TX permits,
+    Extract *csv_name* from the ECHO ZIP, filter to state permits,
     and return the filtered DataFrame.
     """
     with zipfile.ZipFile(zip_path, "r") as zf:
@@ -83,11 +85,11 @@ def extract_and_filter_tx(zip_path: str, csv_name: str, permit_col: str) -> pd.D
 
     print(f"  Total rows: {len(df):,}")
 
-    # Filter to TX permits
+    # Filter to state permits
     if permit_col in df.columns:
         df[permit_col] = df[permit_col].str.strip().str.upper()
-        df = df[df[permit_col].str.startswith(TX_PREFIX)].copy()
-        print(f"  TX rows: {len(df):,}")
+        df = df[df[permit_col].str.startswith(STATE_PREFIX)].copy()
+        print(f"  {STATE_CODE} rows: {len(df):,}")
     else:
         print(f"  Warning: column '{permit_col}' not found. Columns: {list(df.columns)}")
         return pd.DataFrame()
@@ -128,7 +130,7 @@ def pick_primary(df: pd.DataFrame, permit_col: str, code_col: str, flag_col: str
 
 def main() -> None:
     print(f"\n{'='*60}")
-    print("EffluentWatch EPA ECHO Industry Code Fetcher")
+    print(f"{APP_NAME} EPA ECHO Industry Code Fetcher ({STATE_CODE})")
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}\n")
 
@@ -149,7 +151,7 @@ def main() -> None:
 
         # --- Extract NAICS ---
         print("\nProcessing NAICS codes ...")
-        naics_df = extract_and_filter_tx(zip_path, "NPDES_NAICS.csv", "NPDES_ID")
+        naics_df = extract_and_filter_state(zip_path, "NPDES_NAICS.csv", "NPDES_ID")
         if not naics_df.empty:
             naics_df = pick_primary(naics_df, "NPDES_ID", "NAICS_CODE", "PRIMARY_INDICATOR_FLAG")
             # Keep only what we need
@@ -161,13 +163,13 @@ def main() -> None:
             elif "NAICS_DESCRIPTION" in naics_df.columns:
                 naics_cols["NAICS_DESCRIPTION"] = "NAICS_DESC"
             naics_df = naics_df.rename(columns=naics_cols)[list(naics_cols.values())]
-            print(f"  NAICS: {len(naics_df):,} TX permits with codes")
+            print(f"  NAICS: {len(naics_df):,} {STATE_CODE} permits with codes")
         else:
             naics_df = pd.DataFrame(columns=["PERMIT_NUMBER", "NAICS_CODE", "NAICS_DESC"])
 
         # --- Extract SIC ---
         print("\nProcessing SIC codes ...")
-        sic_df = extract_and_filter_tx(zip_path, "NPDES_SICS.csv", "NPDES_ID")
+        sic_df = extract_and_filter_state(zip_path, "NPDES_SICS.csv", "NPDES_ID")
         if not sic_df.empty:
             sic_df = pick_primary(sic_df, "NPDES_ID", "SIC_CODE", "PRIMARY_INDICATOR_FLAG")
             sic_cols = {"NPDES_ID": "PERMIT_NUMBER"}
@@ -178,14 +180,14 @@ def main() -> None:
             elif "SIC_DESCRIPTION" in sic_df.columns:
                 sic_cols["SIC_DESCRIPTION"] = "SIC_DESC"
             sic_df = sic_df.rename(columns=sic_cols)[list(sic_cols.values())]
-            print(f"  SIC: {len(sic_df):,} TX permits with codes")
+            print(f"  SIC: {len(sic_df):,} {STATE_CODE} permits with codes")
         else:
             sic_df = pd.DataFrame(columns=["PERMIT_NUMBER", "SIC_CODE", "SIC_DESC"])
 
     # --- Merge NAICS + SIC on permit number ---
     print("\nMerging NAICS and SIC data ...")
     if naics_df.empty and sic_df.empty:
-        print("ERROR: No industry codes found for TX permits. Exiting.")
+        print(f"ERROR: No industry codes found for {STATE_CODE} permits. Exiting.")
         sys.exit(1)
 
     lookup = pd.merge(naics_df, sic_df, on="PERMIT_NUMBER", how="outer")

@@ -10,10 +10,11 @@ from views.email_alerts import render_email_alerts
 from views.dashboard import render_dashboard
 from views.terms import show_terms_page
 from views.privacy import show_privacy_page
+from state_config import APP_NAME, APP_TAGLINE, DATA_FILE as _CFG_DATA_FILE, CONTACT_EMAIL, DOMAIN
 
 # ── PAGE CONFIG ─────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="EffluentWatch | TX Discharge Monitoring",
+    page_title=f"{APP_NAME} | {APP_TAGLINE}",
     page_icon="📋",
     layout="wide",
     initial_sidebar_state="auto"
@@ -57,7 +58,7 @@ st.sidebar.markdown("""
                  width:22px;height:22px;border:1.5px solid #3a6b1a;border-radius:3px;
                  font-size:8px;color:#3a6b1a;font-weight:600;margin-right:6px;
                  vertical-align:middle;">EW</span>
-    EffluentWatch
+    {APP_NAME}
 </div>
 """, unsafe_allow_html=True)
 nav_page = st.sidebar.radio(
@@ -69,7 +70,7 @@ nav_page = st.sidebar.radio(
 st.session_state.nav_page = nav_page
 
 # ── DATA ────────────────────────────────────────────────────────────────────
-DATA_FILE = "tx_exceedances_launch_ready.csv"
+DATA_FILE = _CFG_DATA_FILE
 FACILITY_LOOKUP = "utils/permit_facility_lookup.csv"
 INDUSTRY_LOOKUP = "utils/permit_industry_lookup.csv"
 
@@ -221,7 +222,7 @@ permit_summary = build_permit_summary(df_all)
 st.markdown("""
 <div class="pm-nav">
     <span class="pm-logo-mark">EW</span>
-    <span class="pm-logo-text">EffluentWatch</span>
+    <span class="pm-logo-text">{APP_NAME}</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -300,9 +301,9 @@ elif nav_page == "Dashboard":
 # ── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown("""
 <div style="text-align: center; color: #6b6560; font-size: 13px; margin-top: 40px; padding: 20px 0; border-top: 1px solid #e0ddd9;">
-    © 2026 EffluentWatch · Data sourced from EPA ECHO · For informational purposes only<br>
+    © 2026 {APP_NAME} · Data sourced from EPA ECHO · For informational purposes only<br>
     Your searches are not logged or shared<br>
-    <a href="mailto:data@effluentwatch.org" style="color: #6b6560;">Report a Data Concern</a>
+    <a href="mailto:{CONTACT_EMAIL}" style="color: #6b6560;">Report a Data Concern</a>
 </div>
 """, unsafe_allow_html=True)
 # Add clickable navigation links below footer

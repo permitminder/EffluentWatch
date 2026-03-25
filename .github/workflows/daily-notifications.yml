@@ -2,7 +2,8 @@ name: Send Daily Exceedance Notifications
 
 on:
   schedule:
-    # Runs at 8 AM CST (2 PM UTC) every day
+    # Runs daily. Adjust cron for your state's timezone.
+    # Default: 2 PM UTC (8 AM CST)
     - cron: '0 14 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 

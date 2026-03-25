@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-EffluentWatch Daily Notification System
+Daily Notification System
 
 Reads subscriptions from Supabase (primary) and email_subscriptions.csv (fallback),
-pulls recent exceedances from tx_exceedances_launch_ready.csv, and sends HTML alert
+pulls recent exceedances from the configured state CSV, and sends HTML alert
 emails via Gmail SMTP.
 
 Supports three subscription types:
@@ -29,20 +29,25 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from state_config import (
+    STATE_CODE, APP_NAME, DATA_FILE as _CFG_DATA_FILE,
+    DOMAIN, MAILING_ADDRESS, CONTACT_EMAIL,
+)
+
 SUBSCRIPTIONS_FILE = "email_subscriptions.csv"
-DATA_FILE = "tx_exceedances_launch_ready.csv"
+DATA_FILE = _CFG_DATA_FILE
 FACILITY_LOOKUP = "utils/permit_facility_lookup.csv"
 INDUSTRY_LOOKUP = "utils/permit_industry_lookup.csv"
 ALERT_LOG_FILE = "alert_log.csv"
-APP_URL = "https://effluentwatch.org"
+APP_URL = f"https://{DOMAIN}"
 
 # Stat base codes that indicate minimum-limit parameters (pH floor, DO floor, etc.)
 _MIN_CODES = {"IB", "DC", "ME", "MJ"}
 # Only these parameters are true floors; other min-code params (Chlorine, Boron) have ceiling limits
 _FLOOR_PARAMS = {"pH", "Oxygen, dissolved [DO]"}
 
-# Permit number pattern: TX followed by alphanumerics
-PERMIT_RE = re.compile(r"\b(TX[A-Z0-9]{3,})\b", re.IGNORECASE)
+# Permit number pattern: state code followed by alphanumerics
+PERMIT_RE = re.compile(rf"\b({STATE_CODE}[A-Z0-9]{{3,}})\b", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
@@ -406,7 +411,7 @@ def build_email_html(email, grouped_results):
 <body style="font-family:Arial,sans-serif;color:#333;max-width:700px;margin:0 auto;">
 
   <div style="background:#1e3a5f;color:white;padding:24px 30px;border-radius:8px 8px 0 0;">
-    <h1 style="margin:0;font-size:22px;">EffluentWatch Daily Alert</h1>
+    <h1 style="margin:0;font-size:22px;">{APP_NAME} Daily Alert</h1>
     <p style="margin:6px 0 0;opacity:.85;font-size:14px;">{today_str} &nbsp;|&nbsp; Exceedance Monitoring Summary</p>
   </div>
 
@@ -471,7 +476,7 @@ def build_email_html(email, grouped_results):
     <a href="{APP_URL}"
        style="background:#1e3a5f;color:white;padding:10px 28px;text-decoration:none;
               border-radius:5px;display:inline-block;">
-      View Full Details on EffluentWatch &rarr;
+      View Full Details on {APP_NAME} &rarr;
     </a>
   </div>
 
@@ -480,8 +485,8 @@ def build_email_html(email, grouped_results):
   <div style="background:#f5f5f5;padding:20px 30px;text-align:center;
               font-size:12px;color:#888;border-radius:0 0 8px 8px;line-height:1.6;">
     <p style="margin:0;">
-      This alert was sent by <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">EffluentWatch</a>
-      (effluentwatch.org) because you subscribed to exceedance alerts.
+      This alert was sent by <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">{APP_NAME}</a>
+      ({DOMAIN}) because you subscribed to exceedance alerts.
     </p>
     <p style="margin:10px 0;color:#999;font-size:11px;">
       Exceedance data reflects values reported to EPA ECHO and may not reflect current
@@ -489,9 +494,9 @@ def build_email_html(email, grouped_results):
       Verify independently before taking action.
     </p>
     <p style="margin:10px 0 0;font-size:11px;">
-      &copy; 2026 EffluentWatch &middot;
-      <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">effluentwatch.org</a><br>
-      PO Box 1501, Austin, TX 78767
+      &copy; 2026 {APP_NAME} &middot;
+      <a href="{APP_URL}" style="color:#1e3a5f;text-decoration:none;">{DOMAIN}</a><br>
+      {MAILING_ADDRESS}
     </p>
     <p style="margin:6px 0 0;">
       <a href="{APP_URL}/?page=alerts" style="color:#1e3a5f;">Manage your subscriptions</a>
@@ -521,7 +526,7 @@ def send_email(recipient, subject, body_html, sender_email, sender_password):
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = f"EffluentWatch <{sender_email}>"
+        msg["From"] = f"{APP_NAME} <{sender_email}>"
         msg["To"] = recipient
         msg.attach(MIMEText(body_html, "html"))
 
@@ -559,7 +564,7 @@ def log_alert(email, subscriptions, total_records, status):
 
 def main():
     print(f"\n{'='*60}")
-    print("EffluentWatch Daily Notification System")
+    print(f"{APP_NAME} Daily Notification System ({STATE_CODE})")
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}\n")
 
@@ -642,7 +647,7 @@ def main():
             skipped_count += 1
             continue
 
-        subject = f"EffluentWatch Alert: {total_records} exceedance(s) — {datetime.now().strftime('%b %d, %Y')}"
+        subject = f"{APP_NAME} Alert: {total_records} exceedance(s) — {datetime.now().strftime('%b %d, %Y')}"
         body = build_email_html(email, grouped_results)
         success = send_email(email, subject, body, sender_email, sender_password)
 
